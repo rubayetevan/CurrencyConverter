@@ -10,6 +10,7 @@ import com.example.currencyconverter.Database.CurrencyVatModel
 import kotlinx.android.synthetic.main.activity_main.*
 import org.jetbrains.anko.doAsync
 import org.jetbrains.anko.uiThread
+import java.text.SimpleDateFormat
 
 
 class ConverterActivity : AppCompatActivity() {
@@ -31,11 +32,30 @@ class ConverterActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         currencyDB = CurrencyDB.getInstance(this@ConverterActivity)
         showCountryList()
-        currencyAmountET?.easyOnTextChangedListener { it->
+        currencyAmountET?.easyOnTextChangedListener { it ->
             showAndCalculateCurrency(it?.toString())
         }
+
+        showAcknowledgement()
+
+
     }
 
+    private fun showAcknowledgement() {
+        try {
+            val pref = getSharedPreferences(Constants.name_sharedPref, 0)
+            val dbUpdateDateString = pref?.getString(Constants.key_db_update_date, "12/13/1912")
+            val dbUpdateDate = SimpleDateFormat("MM/dd/yyyy").parse(dbUpdateDateString)
+
+            val formatter = SimpleDateFormat("dd-MMMM-yyyy")
+            val dt: String = formatter.format(dbUpdateDate)
+
+            nbTV?.text ="${getString(R.string.acknowledgement)} $dt"
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
 
 
     private fun showCountryList() {
@@ -61,7 +81,7 @@ class ConverterActivity : AppCompatActivity() {
                             val rates = currencyDB.currencyVatDao().getRatesByCountryName(selectedCountryName)
                             uiThread {
                                 Log.d(TAG, "rates= $rates")
-                                if(!rates.isNullOrEmpty()) {
+                                if (!rates.isNullOrEmpty()) {
                                     showRateOption(rates[0])
                                 }
                             }
@@ -79,27 +99,27 @@ class ConverterActivity : AppCompatActivity() {
 
 
         if (rate?.standard!! > 0) {
-            standardRateRadioBtnID = createRadioButton(radioGroup, "standard",rate?.standard!!)
+            standardRateRadioBtnID = createRadioButton(radioGroup, "standard", rate?.standard!!)
         }
 
         if (rate?.parking!! > 0) {
-            parkingRateRadioBtnID=createRadioButton(radioGroup, "parking",rate?.parking!!)
+            parkingRateRadioBtnID = createRadioButton(radioGroup, "parking", rate?.parking!!)
         }
 
         if (rate?.super_reduced!! > 0) {
-            super_reducedRateRadioBtnID=createRadioButton(radioGroup, "super_reduced",rate?.super_reduced!!)
+            super_reducedRateRadioBtnID = createRadioButton(radioGroup, "super_reduced", rate?.super_reduced!!)
         }
 
         if (rate?.reduced!! > 0) {
-            reducedRateRadioBtnID=createRadioButton(radioGroup, "reduced",rate?.reduced!!)
+            reducedRateRadioBtnID = createRadioButton(radioGroup, "reduced", rate?.reduced!!)
         }
 
         if (rate?.reduced1!! > 0) {
-            reduced1RateRadioBtnID=createRadioButton(radioGroup, "reduced1",rate?.reduced1!!)
+            reduced1RateRadioBtnID = createRadioButton(radioGroup, "reduced1", rate?.reduced1!!)
         }
 
         if (rate?.reduced2!! > 0) {
-            reduced2RateRadioBtnID=createRadioButton(radioGroup, "reduced2",rate?.reduced2!!)
+            reduced2RateRadioBtnID = createRadioButton(radioGroup, "reduced2", rate?.reduced2!!)
         }
 
         rateRadioGroup?.removeAllViews()
@@ -108,34 +128,34 @@ class ConverterActivity : AppCompatActivity() {
         standardRateRadioBtnID?.let {
             radioGroup?.check(it)
             rateSelectedID = it
-            convertCurrency(it,rate)
+            convertCurrency(it, rate)
         }
 
         radioGroup.setOnCheckedChangeListener { group, checkedId ->
             rateSelectedID = checkedId
-            convertCurrency(checkedId,rate)
+            convertCurrency(checkedId, rate)
         }
 
     }
 
-    private fun convertCurrency(checkedId: Int,rate: CurrencyVatModel) {
-        when(checkedId){
-            standardRateRadioBtnID->{
+    private fun convertCurrency(checkedId: Int, rate: CurrencyVatModel) {
+        when (checkedId) {
+            standardRateRadioBtnID -> {
                 calculateCurrencyBasedOnUserInput(rate.standard)
             }
-            parkingRateRadioBtnID->{
+            parkingRateRadioBtnID -> {
                 calculateCurrencyBasedOnUserInput(rate.parking)
             }
-            super_reducedRateRadioBtnID->{
+            super_reducedRateRadioBtnID -> {
                 calculateCurrencyBasedOnUserInput(rate.super_reduced)
             }
-            reducedRateRadioBtnID->{
+            reducedRateRadioBtnID -> {
                 calculateCurrencyBasedOnUserInput(rate.reduced)
             }
-            reduced1RateRadioBtnID->{
+            reduced1RateRadioBtnID -> {
                 calculateCurrencyBasedOnUserInput(rate.reduced1)
             }
-            reduced2RateRadioBtnID->{
+            reduced2RateRadioBtnID -> {
                 calculateCurrencyBasedOnUserInput(rate.reduced2)
             }
         }
@@ -146,18 +166,31 @@ class ConverterActivity : AppCompatActivity() {
         showAndCalculateCurrency(currencyAmountET?.text?.toString())
     }
 
-    private fun showAndCalculateCurrency(amount:String?){
-        convertedCurrecyTV?.text =  if(amount?.isNotBlank()!!) {
-            val amountD= currencyAmountET?.text?.toString()?.toDouble()
-            (amountD!! +(amountD*(currentVateRate!! /100.00))).toString()
-        }else{
-            0.0.toString()
+    private fun showAndCalculateCurrency(amount: String?) {
+        var convertedCurrency = 0.0
+        var tax = 0.0
+        var amountD = 0.0
+
+        if (amount?.isNotBlank()!!) {
+            amountD = amount?.toDouble()
+            tax = amountD * (currentVateRate!! / 100.00)
+            convertedCurrency = amountD + tax
+        } else {
+            tax = 0.0
+            convertedCurrency = 0.0
+            amountD=0.0
         }
-        Log.d(TAG,"convertedCurrency: ${convertedCurrecyTV.text}")
+
+        originalAmountTV.text = "$amountD"
+        taxTV.text = "$tax"
+        convertedCurrecyTV?.text = "$convertedCurrency"
+
+        Log.d(TAG, "originalAmount: $amount \ntax: $tax \nconvertedCurrency: $convertedCurrency")
+
     }
 
 
-    private fun createRadioButton(radioGroup: RadioGroup, radioButtonText: String,rate:Double): Int {
+    private fun createRadioButton(radioGroup: RadioGroup, radioButtonText: String, rate: Double): Int {
         val radioButton = RadioButton(this@ConverterActivity)
         radioButton.text = "$radioButtonText ($rate%)"
         radioButton.id = View.generateViewId()
