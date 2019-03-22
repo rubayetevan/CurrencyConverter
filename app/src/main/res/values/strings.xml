@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Currency VAT Calculator</string>
+    <string name="alert_no_internet">No Internet!</string>
+    <string name="turn_on_wifi">GO TO CONNECTION SETTING</string>
+    <string name="went_wrong">Something went wrong!</string>
+    <string name="retry">Retry</string>
 </resources>

@@ -5,6 +5,7 @@ import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.net.ConnectivityManager
 import android.os.Bundle
+import android.provider.Settings
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
@@ -13,25 +14,27 @@ import com.example.currencyconverter.Constants.Companion.key_db_update_date
 import com.example.currencyconverter.Constants.Companion.name_sharedPref
 import com.example.currencyconverter.Database.CurrencyDB
 import com.example.currencyconverter.Database.CurrencyVatModel
+import com.google.android.material.snackbar.Snackbar
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
+import kotlinx.android.synthetic.main.activity_splash.*
 import org.jetbrains.anko.doAsync
 import org.jetbrains.anko.uiThread
 import java.text.SimpleDateFormat
 import java.util.*
 
+
 class SplashActivity : AppCompatActivity(), ConnectivityReceiver.ConnectivityReceiverListener {
 
 
     private val internetBroadCastReceiver = ConnectivityReceiver()
-
+    private var mSnackBar: Snackbar? = null
     private var disposable: Disposable? = null
     private val TAG = "SplashActivity"
-
     lateinit var currencyDB: CurrencyDB
-
     private var pref: SharedPreferences? = null
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,7 +47,7 @@ class SplashActivity : AppCompatActivity(), ConnectivityReceiver.ConnectivityRec
 
 
     override fun onNetworkConnectionChanged(isConnected: Boolean) {
-        val dbUpdateDateString= pref?.getString(key_db_update_date, "12/13/1912")
+        val dbUpdateDateString = pref?.getString(key_db_update_date, "12/13/1912")
         val dbUpdateDate = SimpleDateFormat("MM/dd/yyyy").parse(dbUpdateDateString)
 
         val date = Date()
@@ -52,17 +55,18 @@ class SplashActivity : AppCompatActivity(), ConnectivityReceiver.ConnectivityRec
         val today: String = formatter.format(date)
         val todayDate = SimpleDateFormat("MM/dd/yyyy").parse(today)
 
-        if(todayDate>dbUpdateDate){
+        if (todayDate > dbUpdateDate) {
             if (isConnected) {
+                mSnackBar?.dismiss()
                 insertDataToInternalDB()
-                Log.d(TAG,"stage: insertDataToInternalDB")
+                Log.d(TAG, "stage: insertDataToInternalDB")
             } else {
                 takeDBUpdateDecision(isConnected)
-                Log.d(TAG,"stage: takeDBUpdateDecision1")
+                Log.d(TAG, "stage: takeDBUpdateDecision1")
             }
-        }else {
+        } else {
             takeDBUpdateDecision(isConnected)
-            Log.d(TAG,"stage: takeDBUpdateDecision2")
+            Log.d(TAG, "stage: takeDBUpdateDecision2")
         }
     }
 
@@ -72,6 +76,7 @@ class SplashActivity : AppCompatActivity(), ConnectivityReceiver.ConnectivityRec
             uiThread {
                 if (currencyVatModelList.isNullOrEmpty()) {
                     if (isConnected) {
+                        mSnackBar?.dismiss()
                         insertDataToInternalDB()
                     } else {
                         showInternetConnectionAlert()
@@ -84,7 +89,12 @@ class SplashActivity : AppCompatActivity(), ConnectivityReceiver.ConnectivityRec
     }
 
     private fun showInternetConnectionAlert() {
-
+        mSnackBar = Snackbar
+            .make(splashActivityCL, getString(R.string.alert_no_internet), Snackbar.LENGTH_INDEFINITE)
+            .setAction(getString(R.string.turn_on_wifi)) {
+                startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
+            }
+        mSnackBar?.show()
     }
 
     private fun goToNextPage() {
@@ -130,7 +140,7 @@ class SplashActivity : AppCompatActivity(), ConnectivityReceiver.ConnectivityRec
                         val dbUpdateDate: String = formatter.format(date)
 
                         pref?.edit {
-                            putString(key_db_update_date,dbUpdateDate)
+                            putString(key_db_update_date, dbUpdateDate)
                         }
 
                         goToNextPage()
@@ -139,6 +149,12 @@ class SplashActivity : AppCompatActivity(), ConnectivityReceiver.ConnectivityRec
 
             }, { error ->
                 Log.d(TAG, "got error-> ${error.message}")
+                val mSnackBar = Snackbar
+                    .make(splashActivityCL, getString(R.string.went_wrong), Snackbar.LENGTH_INDEFINITE)
+                    .setAction(getString(R.string.retry)) {
+                        insertDataToInternalDB()
+                    }
+                mSnackBar?.show()
             })
     }
 
