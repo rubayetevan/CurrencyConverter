@@ -16,7 +16,7 @@ interface ApiService {
     fun getCurrencyList(): Single<CurrencyVatModel>
 
     companion object {
-        fun create(): ApiService {
+        /*fun create(): ApiService {
 
             val gson = GsonBuilder()
                 .setLenient()
@@ -36,6 +36,42 @@ interface ApiService {
                 .baseUrl(Constants.jsonvaBbaseURL)
                 .build()
             return retrofit.create(ApiService::class.java)
+        }*/
+
+        @Volatile
+        private var retrofit: Retrofit? = null
+
+
+        @Synchronized
+        fun create(): ApiService {
+
+            retrofit ?: synchronized(this) {
+                retrofit = buildRetrofit()
+            }
+
+            return retrofit?.create(ApiService::class.java)!!
+        }
+
+
+        private fun buildRetrofit(): Retrofit {
+
+            val gson = GsonBuilder()
+                .setLenient()
+                .create()
+
+            val interceptor = HttpLoggingInterceptor()
+            interceptor.level = HttpLoggingInterceptor.Level.BODY
+
+            val okHttpClient = OkHttpClient.Builder()
+                .addInterceptor(interceptor)
+                .build()
+
+            return Retrofit.Builder()
+                .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
+                .client(okHttpClient)
+                .addConverterFactory(GsonConverterFactory.create(gson))
+                .baseUrl(Constants.jsonvaBbaseURL)
+                .build()
         }
     }
 }
